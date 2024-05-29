@@ -3,7 +3,8 @@ package com.springauthentication.authenticationproject;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
-@Controller
+//First class created follewed by SecurityConfiguration
+@Controller //tell spring boot that this is a controller class
 public class ContentController {
     @GetMapping("/home")
     public String handleWelcome(){
