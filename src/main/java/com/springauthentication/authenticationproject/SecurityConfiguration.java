@@ -9,6 +9,7 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractAuthenticationFilterConfigurer;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -29,21 +30,30 @@ public class SecurityConfiguration {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity)
         throws Exception {
-        return httpSecurity.authorizeHttpRequests(registry->{
-            registry.requestMatchers("/home").permitAll();
+        return httpSecurity
+                //by default, csrf blocks all Post requests. So when trying to post to the database
+                //csrf will block the request unless it is disabled as shown below
+                .csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(registry->{
+            registry.requestMatchers("/home", "/register/**").permitAll();
             registry.requestMatchers("/admin/**").hasRole("ADMIN");
             registry.requestMatchers("/user/**").hasRole("USER");
             registry.anyRequest().authenticated(); //any request not mentioned above needs to
                                                     //be authenticated
         })      //to make the login page accessible to anyone
-                .formLogin(AbstractAuthenticationFilterConfigurer::permitAll) //this is a reference to (formLogin -> formLogin.permitAll())
+                .formLogin(httpSecurityFormLoginConfigurer -> {
+                    httpSecurityFormLoginConfigurer
+                            .loginPage("/login")//this is to customize the login page using custom_login
+                            .successHandler(new AuthenticationSuccessHandler()) //call successHandler to redirect the page after successful login
+                            .permitAll();
+                }) //this is a reference to (formLogin -> formLogin.permitAll())
                 .build();  //NEXT, WE CREATE THE IN-MEMORY USERS BELOW
     }
 
 //a Bean is an instantiation of java core object such JpaRepository instanced as:
-    //public void JpaRepository jpaRepository(){}
+    //public.error void JpaRepository jpaRepository(){}
 //    @Bean
-//    public UserDetailsService userDetailsService(){
+//    public.error UserDetailsService userDetailsService(){
 //        UserDetails normalUser = User.builder()
 //                .username("gc")
 //                .password("$2a$12$v8/r9pbeX60VJs97e.2ZqOrlCzSTWe3Iys/WBE4V9CTz3q0GOHeoO")
@@ -56,7 +66,7 @@ public class SecurityConfiguration {
 //        UserDetails adminUser = User.builder()
 //                .username("admin")
 //                .password("$2a$12$hl8LoubF4s/ARJtOMBTkMOPqIOXNC91qV9TnKto4ZsQ6.CYIH4LJu")
-//                //use an online generator to generate to encoded password for "1234".
+//                //use an online generator to generate to encoded password for "6261".
 //                //password is encoded because others may have access to the code
 //                //to encode, we indicate what kind of encoding technique we are using below
 //                .roles("ADMIN", "USER")
@@ -79,6 +89,7 @@ public class SecurityConfiguration {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
         provider.setUserDetailsService(userDetailService);
         provider.setPasswordEncoder(passwordEncoder());
+
         return provider;
     }
 
